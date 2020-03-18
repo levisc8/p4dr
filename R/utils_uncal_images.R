@@ -9,6 +9,7 @@
 #' @importFrom stringr str_extract_all
 #' @importFrom glue glue
 #' @importFrom utils read.table
+#' @importFrom purrr map_chr
 #'
 #' @examples
 #' \dontrun{
@@ -19,7 +20,7 @@
 #' @export
 
 
-find_uncal_photos <- function(proj_name, proj_dir, img_dir = proj_dir) {
+find_uncal_photos <- function(proj_name, proj_dir, img_dir = proj_dir, extra_0 = TRUE) {
 
   # Read in log file
   project_log <- paste(proj_dir,
@@ -46,10 +47,20 @@ find_uncal_photos <- function(proj_name, proj_dir, img_dir = proj_dir) {
 
   # get image names
 
-  img_nms     <- stringr::str_extract_all(uncal_lines,
-                                          'DJI_[0-9]+\\.JPG')
+  i <- ifelse(extra_0, 4, 3)
 
-  img_nms     <- unlist(img_nms)
+  img_nms     <- stringr::str_extract_all(uncal_lines,
+                                          paste('DJI_[0-9]{',
+                                                i,
+                                                '}|([ ]?\\(([^()]+)\\))?\\.JPG',
+                                                sep = "")
+                                                )
+
+  img_nms     <- purrr::map_chr(img_nms, ~paste(.x[1], .x[2], sep = ""))
+
+  if(all(!grepl('JPG', img_nms))) {
+    img_nms <- paste0(img_nms, '.JPG', sep = "")
+  }
 
   img_paths   <- glue::glue('{img_dir}/{img_nms}')
 
@@ -82,7 +93,7 @@ handle_uncal_photos <- function(img_paths, move_to, delete = FALSE) {
 
   }
 
-  return(out)
+  invisible(out)
 
 }
 
